@@ -1,0 +1,17 @@
+{
+  "name": "LangChain",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "ts-node main.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.21.0",
+    "openai": "^3.2.1",
+    "typescript": "^5.0.4"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1"
+  }
+}

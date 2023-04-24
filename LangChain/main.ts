@@ -11,7 +11,10 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { createClient } from '@supabase/supabase-js';
 import * as fs from "fs";
 import { Document } from "langchain/document";
-import { TextLoader } from "langchain/document_loaders";
+import { TextLoader } from "langchain/document_loaders/fs/text";
+import { SupabaseVectorStore } from "langchain/vectorstores/supabase";
+import { SupabaseHybridSearch } from "langchain/retrievers/supabase";
+
 
 dotenv.config();
 
@@ -149,17 +152,46 @@ const vectorDBExample = async () => {
 
     async function addVectors(vectors: number[][], documents: Document[], ids?: string[]): Promise<void> {
         vectors.forEach(async (vector, idx) => {
-            const { data, error } = await supabase.from('posts').upsert({
+            const { data, error } = await supabase.from('documents').upsert({
                 id: `${idx}`,
                 metadata:  {
                     ...documents[idx].metadata,
-                    text: documents[idx].pageContent
                 },
+                content: documents[idx].pageContent,
                 embedding: vector,
             });
         });
     }
 }
+
+const vectorDBSimilaritySearch = async () => {
+    const supabase = createClient(process.env.SUPABASE_PROJECT_URL!, process.env.SUPABASE_API_KEY!);
+    
+    const vectorStore = await SupabaseVectorStore.fromExistingIndex(new OpenAIEmbeddings(), {
+        client: supabase,
+        tableName: "Documents",
+        queryName: "match_documents"
+    });
+
+    const res = await vectorStore.similaritySearch("He came to come to report on the State of the Union on what year?", 1);
+    console.log(res);
+}
+
+const vectorDBHybridSearch = async () => {
+    const supabase = createClient(process.env.SUPABASE_PROJECT_URL!, process.env.SUPABASE_API_KEY!);
+    
+    const retriever = new SupabaseHybridSearch(new OpenAIEmbeddings(), {
+        client: supabase,
+        similarityK: 1,
+        keywordK: 1,
+        tableName: "documents",
+        similarityQueryName: "match_documents",
+        keywordQueryName: "kw_match_documents",
+      });
+
+    const res = await retriever.getRelevantDocuments("He came to come to report on the State of the Union on what year?");
+    console.log(res);
+};
 
 const rawTextLoadExample = async () => {
      const loader = new TextLoader(
